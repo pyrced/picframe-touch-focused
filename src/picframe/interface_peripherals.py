@@ -69,6 +69,9 @@ class InterfacePeripherals:
         self.__pointer_position = (0, 0)
         self.__timestamp = 0
 
+        # New state variable to track touch state
+        self.__is_touching = False
+
     def check_input(self) -> None:
         """Checks for any input from the selected peripheral device and handles it."""
         if not self.__input_type:
@@ -255,24 +258,29 @@ class InterfacePeripherals:
                 self.__gui.checkkey(code)
 
     def __handle_touch_input(self) -> None:
-        """Due to pi3d not reliably detecting touch as Mouse.LEFT_BUTTON event
-        when a touch happens at any position with x or y lower than previous touch,
-        any pointer movement is considered a click event.
-        """
+        """Handle touch input to ensure only one click is registered per touch."""
         if self.__pointer_moved():
             if not self.controller.display_is_on:
                 self.controller.display_is_on = True
-            elif self.__pointer_position[1] < self.__viewer.display_height // 2 - self.__menu_height:
-                # Touch in main area
-                if self.menu_is_on:
-                    self.menu_is_on = False
+
+            # Check if touch is starting
+            if not self.__is_touching:
+                self.__is_touching = True  # Mark touch as started
+
+            # Check if touch is ending (finger lifted)
+            elif self.__is_touching and not self.__pointer_moved():
+                self.__is_touching = False  # Mark touch as ended
+                if self.__pointer_position[1] < self.__viewer.display_height // 2 - self.__menu_height:
+                    # Touch in main area
+                    if self.menu_is_on:
+                        self.menu_is_on = False
+                    else:
+                        self.__handle_click()
                 else:
-                    self.__handle_click()
-            else:
-                # Touch in menu area
-                if self.menu_is_on:
-                    self.__handle_click()
-                self.menu_is_on = True  # Reset clock for autohide
+                    # Touch in menu area
+                    if self.menu_is_on:
+                        self.__handle_click()
+                    self.menu_is_on = True  # Reset clock for autohide
 
     def __handle_mouse_input(self) -> None:
         if self.__pointer_moved() and not self.controller.display_is_on:
