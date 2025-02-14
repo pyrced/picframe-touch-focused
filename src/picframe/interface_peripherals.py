@@ -69,7 +69,6 @@ class InterfacePeripherals:
         self.__pointer_position = (0, 0)
         self.__timestamp = 0
 
-        # New state variable to track touch state
         self.__is_touching = False
 
     def check_input(self) -> None:
